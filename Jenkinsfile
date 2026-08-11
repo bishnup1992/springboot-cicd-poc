@@ -18,6 +18,13 @@ pipeline {
                 sh 'mvn clean verify'
             }
         }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube-Local') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=springboot-cicd-poc'
+                }
+            }
+        }
     }
 
     post {
