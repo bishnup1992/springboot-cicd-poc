@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-cicd-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: springboot-cicd-poc
+  template:
+    metadata:
+      labels:
+        app: springboot-cicd-poc
+    spec:
+      containers:
+        - name: springboot-cicd-poc
+          image: 429496639762.dkr.ecr.ap-south-1.amazonaws.com/springboot-cicd-poc:eabd5fb
+          ports:
+            - containerPort: 8080
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15

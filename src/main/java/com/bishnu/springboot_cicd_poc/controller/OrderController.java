@@ -27,9 +27,14 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
 
         return ResponseEntity.ok(orderService.getOrder(id));
+    }
+
+    @GetMapping("/version")
+    public ResponseEntity<String> getVersion() {
+        return ResponseEntity.ok("Spring Boot CI/CD POC - Version 2");
     }
 }

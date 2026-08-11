@@ -1,0 +1,23 @@
+replicaCount: 2
+
+image:
+  repository: 429496639762.dkr.ecr.ap-south-1.amazonaws.com/springboot-cicd-poc
+  tag: eabd5fb
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+containerPort: 8080
+
+readinessProbe:
+  path: /actuator/health
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+livenessProbe:
+  path: /actuator/health
+  initialDelaySeconds: 30
+  periodSeconds: 15

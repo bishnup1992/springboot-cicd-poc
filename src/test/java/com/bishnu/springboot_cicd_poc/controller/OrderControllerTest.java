@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -79,5 +80,12 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.productName").exists())
                 .andExpect(jsonPath("$.quantity").exists())
                 .andExpect(jsonPath("$.price").exists());
+    }
+
+    @Test
+    void shouldReturnVersion() throws Exception {
+        mockMvc.perform(get("/api/orders/version"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Spring Boot CI/CD POC - Version 2"));
     }
 }
