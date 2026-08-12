@@ -2,7 +2,6 @@ replicaCount: 1
 
 image:
   repository: 429496639762.dkr.ecr.ap-south-1.amazonaws.com/springboot-cicd-poc
-  tag: eabd5fb
   pullPolicy: IfNotPresent
 
 service:

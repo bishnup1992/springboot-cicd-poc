@@ -5,6 +5,15 @@ pipeline {
         maven 'Maven-3.9'
     }
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        AWS_ACCOUNT_ID = '429496639762'
+        ECR_REPOSITORY = 'springboot-cicd-poc'
+        ECR_REGISTRY = '429496639762.dkr.ecr.ap-south-1.amazonaws.com'
+        EKS_CLUSTER = 'springboot-cicd-poc-cluster'
+        HELM_CHART = 'springboot-cicd-chart'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -18,6 +27,7 @@ pipeline {
                 sh 'mvn clean verify'
             }
         }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube-Local') {
@@ -25,6 +35,7 @@ pipeline {
                 }
             }
         }
+
         stage('Quality Gate') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
@@ -32,15 +43,88 @@ pipeline {
                 }
             }
         }
+
+        stage('Generate Image Tag') {
+            steps {
+                script {
+                    env.IMAGE_TAG = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Image tag: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build \
+                      -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
+                '''
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        aws ecr get-login-password \
+                          --region ${AWS_REGION} \
+                        | docker login \
+                          --username AWS \
+                          --password-stdin ${ECR_REGISTRY}
+
+                        docker tag \
+                          ${ECR_REPOSITORY}:${IMAGE_TAG} \
+                          ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+                        docker push \
+                          ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy DEV') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        aws eks update-kubeconfig \
+                          --region ${AWS_REGION} \
+                          --name ${EKS_CLUSTER}
+
+                        helm upgrade --install springboot-dev \
+                          ./${HELM_CHART} \
+                          -f ./${HELM_CHART}/values-dev.yaml \
+                          --set image.tag=${IMAGE_TAG} \
+                          -n dev
+                    '''
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'Build completed successfully'
+            echo "Pipeline completed successfully. Image tag: ${env.IMAGE_TAG}"
         }
 
         failure {
-            echo 'Build failed'
+            echo 'Pipeline failed'
         }
     }
 }
