@@ -116,6 +116,59 @@ pipeline {
                 }
             }
         }
+        stage('Approve SIT') {
+            steps {
+                input message: "Deploy image ${IMAGE_TAG} to SIT?",
+                      ok: 'Deploy to SIT'
+            }
+        }
+
+        stage('Deploy SIT') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        helm upgrade --install springboot-sit \
+                          ./${HELM_CHART} \
+                          -f ./${HELM_CHART}/values-sit.yaml \
+                          --set image.tag=${IMAGE_TAG} \
+                          -n sit
+                    '''
+                }
+            }
+        }
+
+        stage('Approve PROD') {
+            steps {
+                input message: "Deploy image ${IMAGE_TAG} to PROD?",
+                      ok: 'Deploy to PROD'
+            }
+        }
+
+        stage('Deploy PROD') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        helm upgrade --install springboot-prod \
+                          ./${HELM_CHART} \
+                          -f ./${HELM_CHART}/values-prod.yaml \
+                          --set image.tag=${IMAGE_TAG} \
+                          -n prod
+                    '''
+                }
+            }
+        }
     }
 
     post {
